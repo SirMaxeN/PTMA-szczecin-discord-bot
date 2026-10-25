@@ -1,0 +1,25 @@
+{
+  "name": "forum-discord-bot",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env app.js",
+    "test": "node --test tests/*.test.js",
+    "register": "node --env-file-if-exists=.env scripts/register.js",
+    "maintenance": "node --env-file-if-exists=.env scripts/maintenance.js",
+    "forum:check": "node --env-file-if-exists=.env scripts/check-forum.js",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "cheerio": "1.1.2",
+    "tough-cookie": "6.0.0"
+  },
+  "devDependencies": {
+    "prettier": "3.9.10"
+  }
+}

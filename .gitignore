@@ -1,0 +1,21 @@
+# Dependencies and generated artifacts
+node_modules/
+local-artifacts/
+deployment/
+coverage/
+*.log
+logs/
+
+# Private configuration and runtime state
+.env
+.env.*
+!.env.example
+data/
+backups/
+config/release.json
+tmp/
+*.sqlite*
+
+# Private deployment settings and artwork
+.deploy.psd1
+assets/

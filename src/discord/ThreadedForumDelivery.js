@@ -95,7 +95,9 @@ export class ThreadedForumDelivery {
             `channels/${channel}/messages/${root.message}/threads`,
             'POST',
             {
-              name: 'Odpowiedzi',
+              name: Array.from(`Odpowiedzi - ${post.title.trim() || 'Temat'}`)
+                .slice(0, 100)
+                .join(''),
               auto_archive_duration: 1440,
             },
           );

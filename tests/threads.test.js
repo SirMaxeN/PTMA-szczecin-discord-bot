@@ -64,6 +64,7 @@ test('a starter stays on the channel; only the first reply creates a thread', as
   await delivery.deliver('g', 'c', items[1]);
   await delivery.deliver('g', 'c', items[2]);
   assert.equal(discord.threadChannels.size, 1);
+  assert.equal([...discord.threadChannels.values()][0].name, 'Odpowiedzi');
   assert.deepEqual(
     [...discord.messages.values()].map((m) => m.channel_id),
     ['c', 'm1', 'm1'],

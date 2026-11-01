@@ -1,3 +1,4 @@
+import { ThreadNoticeCleaner } from '../src/discord/ThreadNoticeCleaner.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -138,4 +139,55 @@ test('failed thread creation leaves starter reusable for the next attempt', asyn
   discord.failCreate = false;
   await delivery.deliver('g', 'c', posts()[1]);
   assert.equal(discord.messages.size, 2);
+});
+
+test('thread notice cleanup deletes only the matching bot system announcement', async () => {
+  const calls = [];
+  const matching = {
+    id: 'notice',
+    type: 18,
+    author: { id: 'bot' },
+    message_reference: { guild_id: 'g', channel_id: 'thread' },
+  };
+  const discord = {
+    currentUser: async () => ({ id: 'bot' }),
+    request: async (path, method) => {
+      if (method === 'DELETE') {
+        calls.push(path);
+        return null;
+      }
+      return [
+        matching,
+        { ...matching, id: 'human', author: { id: 'human' } },
+        { ...matching, id: 'normal', type: 0 },
+        {
+          ...matching,
+          id: 'other-thread',
+          message_reference: { guild_id: 'g', channel_id: 'other' },
+        },
+      ];
+    },
+  };
+  const cleaner = new ThreadNoticeCleaner(discord);
+  assert.equal(
+    await cleaner.clean('g', 'c', { id: 'thread', guild_id: 'g', parent_id: 'c', owner_id: 'bot' }),
+    1,
+  );
+  assert.deepEqual(calls, ['channels/c/messages/notice']);
+});
+
+test('failure to remove the cosmetic system notice does not block forum replies', async (t) => {
+  const { database, discord, delivery } = fixture(t);
+  delivery.noticeCleaner.clean = async () => {
+    throw new Error('Missing permission');
+  };
+  const original = console.error;
+  console.error = () => {};
+  try {
+    await delivery.deliver('g', 'c', posts()[1]);
+  } finally {
+    console.error = original;
+  }
+  assert.equal(discord.messages.size, 2);
+  assert.ok(database.messageLocation('g', 11).message);
 });

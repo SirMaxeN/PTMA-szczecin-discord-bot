@@ -1,13 +1,16 @@
+import { ThreadNoticeCleaner } from './ThreadNoticeCleaner.js';
 import { DiscordTopicIndex } from './DiscordTopicIndex.js';
 
 export class ThreadedForumDelivery {
   constructor(database, discord, forum) {
     Object.assign(this, { database, discord, forum });
+    this.noticeCleaner = new ThreadNoticeCleaner(discord);
     this.beginCheck();
   }
   beginCheck() {
     this.indexes = new Map();
     this.threads = new Map();
+    this.cleanedNotices = new Set();
   }
   index(guild, channel) {
     const key = `${guild}:${channel}`;
@@ -123,6 +126,15 @@ export class ThreadedForumDelivery {
       throw new Error('Wątek odpowiedzi jest zablokowany. Administrator musi go odblokować.');
     if (thread.thread_metadata?.archived) {
       thread = await this.discord.request(`channels/${thread.id}`, 'PATCH', { archived: false });
+    }
+    if (!this.cleanedNotices.has(thread.id)) {
+      try {
+        await this.noticeCleaner.clean(guild, channel, thread);
+        this.cleanedNotices.add(thread.id);
+      } catch {
+        // Cosmetic cleanup must never prevent delivery of a forum reply.
+        console.error('Thread announcement cleanup failed.');
+      }
     }
     this.threads.set(thread.id, thread);
     return thread.id;

@@ -1,11 +1,13 @@
+import { ThreadedForumDelivery } from '../discord/ThreadedForumDelivery.js';
 import { randomUUID } from 'node:crypto';
 import { ForumSchedule } from './ForumSchedule.js';
 
 export class ForumMonitor {
-  constructor(database, forum, discord) {
+  constructor(database, forum, discord, threadedDelivery = null) {
     this.database = database;
     this.forum = forum;
     this.discord = discord;
+    this.threadedDelivery = threadedDelivery || new ThreadedForumDelivery(database, discord, forum);
   }
   async check(guild, preview = false, automatic = false) {
     const owner = randomUUID();
@@ -22,6 +24,7 @@ export class ForumMonitor {
       }
       const posts = snapshot.posts.filter((post) => !this.database.sent(guild, post.id));
       if (preview) return { preview, posts, sent: 0 };
+      this.threadedDelivery?.beginCheck();
       let sent = 0;
       for (const post of posts) {
         const current = this.database.settings(guild);
@@ -29,12 +32,13 @@ export class ForumMonitor {
           return { posts, sent, paused: true };
         if (current?.channel !== settings.channel)
           throw new Error('Zmieniono kanał powiadomień. Uruchom sprawdzanie ponownie.');
-        await this.discord.send(settings.channel, guild, {
+        const notification = {
           ...post,
           forumName: this.forum.name,
           showContent: this.database.showContent(guild),
           contentLimit: this.database.contentLimit(guild),
-        });
+        };
+        await this.threadedDelivery.deliver(guild, settings.channel, notification);
         this.database.delivered(guild, post.id, this.discord.nonce(guild, post.id));
         sent++;
       }

@@ -17,6 +17,15 @@ import { InteractionServer } from '../src/http/InteractionServer.js';
 import { ForumSchedule } from '../src/forum/ForumSchedule.js';
 import { DiscordApi } from '../src/discord/DiscordApi.js';
 
+// Monitor tests isolate scanning/deduplication from Discord thread routing,
+// which has its own integration tests in threads.test.js.
+function createMonitor(database, forum, discord) {
+  return new ForumMonitor(database, forum, discord, {
+    beginCheck() {},
+    deliver: (guild, channel, post) => discord.send(channel, guild, post),
+  });
+}
+
 function fixture(t) {
   const dir = mkdtempSync(join(tmpdir(), 'forum-test-'));
   const db = new Database(join(dir, 'test.sqlite'));
@@ -105,7 +114,7 @@ test('custom schedules cover intervals, overnight windows and saved UI selection
   assert.throws(() => db.setSchedule('1', 'interval', 90));
   assert.throws(() => db.setSchedule('1', 'end', 24));
   let scans = 0;
-  const monitor = new ForumMonitor(
+  const monitor = createMonitor(
     db,
     {
       scan: async () => {
@@ -172,7 +181,7 @@ test('setup menu opens forum settings; pause persists, manual checks work and cl
   db.configure('1', '2');
   db.baseline('1', 100);
   let scans = 0;
-  const monitor = new ForumMonitor(
+  const monitor = createMonitor(
     db,
     {
       scan: async () => {
@@ -218,7 +227,7 @@ test('pausing during an automatic scan prevents delivery', async (t) => {
   db.configure('1', '2');
   db.baseline('1', 100);
   let sends = 0;
-  const monitor = new ForumMonitor(
+  const monitor = createMonitor(
     db,
     {
       scan: async () => {
@@ -242,7 +251,7 @@ test('baseline suppresses archive; preview never consumes posts; sends only once
   db.configure('1', '2');
   let snapshot = { maxId: 100, posts: [] };
   const sent = [];
-  const monitor = new ForumMonitor(
+  const monitor = createMonitor(
     db,
     { scan: async () => snapshot },
     { send: async (_, __, p) => sent.push(p.id), nonce: () => 'nonce' },
@@ -268,7 +277,7 @@ test('partial delivery retains retry for unsent posts', async (t) => {
   db.baseline('1', 100);
   let fail = true;
   const sent = [];
-  const monitor = new ForumMonitor(
+  const monitor = createMonitor(
     db,
     { scan: async () => ({ posts: [post(101), post(102)], maxId: 102 }) },
     {
@@ -293,7 +302,7 @@ test('database locks exclude overlapping processes and hourly cron is idempotent
   db.release('forum', 'a');
   db.configure('1', '2');
   let scans = 0;
-  const monitor = new ForumMonitor(
+  const monitor = createMonitor(
     db,
     {
       scan: async () => {
@@ -365,6 +374,12 @@ test('crawler follows topic/list pagination and finds every new reply', async ()
     (await forum.scan(10)).posts.map((p) => p.id),
     [11, 12],
   );
+  const replies = (await forum.scan(11)).posts;
+  assert.equal(replies.length, 1);
+  assert.equal(replies[0].id, 12);
+  assert.equal(replies[0].isTopicStarter, false);
+  assert.equal(replies[0].starter.id, 11);
+  assert.equal(replies[0].topicUrl, 'https://example.org/forum/topic/t/');
   assert.throws(() => forum.safeUrl('https://attacker.test/'), /Unexpected/);
 });
 test('HTTP interactions reject invalid signatures and accept signed PING', async (t) => {
@@ -390,7 +405,7 @@ test('automatic checks respect Warsaw 10 through 22 in summer and winter; manual
   const db = fixture(t);
   db.configure('1', '2');
   let scans = 0;
-  const monitor = new ForumMonitor(
+  const monitor = createMonitor(
     db,
     {
       scan: async () => {
@@ -529,7 +544,7 @@ test('schedule starts on the clock and always checks the closing hour once', asy
   db.setSchedule('1', 'end', 16);
   db.setSchedule('1', 'interval', 240);
   let scans = 0;
-  const monitor = new ForumMonitor(
+  const monitor = createMonitor(
     db,
     {
       scan: async () => {
@@ -604,7 +619,7 @@ test('content configuration saves limits, preserves toggle state and controls de
   discord.request = async (_, __, body) => {
     payload = body;
   };
-  const monitor = new ForumMonitor(
+  const monitor = createMonitor(
     db,
     { scan: async () => ({ maxId: 11, posts: [{ ...post(11), content: 'a'.repeat(2000) }] }) },
     discord,

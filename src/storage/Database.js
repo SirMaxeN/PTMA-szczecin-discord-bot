@@ -21,6 +21,10 @@ export class Database {
     this.db.exec(
       'CREATE TABLE IF NOT EXISTS notification_options(guild TEXT PRIMARY KEY,show_content INTEGER NOT NULL DEFAULT 0,content_limit INTEGER NOT NULL DEFAULT 500)',
     );
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS forum_topics(guild TEXT,channel TEXT,topic_url TEXT,starter_post TEXT,message TEXT,thread TEXT,PRIMARY KEY(guild,channel,topic_url));
+      CREATE TABLE IF NOT EXISTS message_locations(guild TEXT,post TEXT,channel TEXT,message TEXT,PRIMARY KEY(guild,post));
+    `);
     if (
       !this.db
         .prepare('PRAGMA table_info(settings)')
@@ -47,6 +51,30 @@ export class Database {
         'ALTER TABLE notification_options ADD COLUMN content_limit INTEGER NOT NULL DEFAULT 500',
       );
     }
+  }
+  topic(guild, channel, topicUrl) {
+    return this.db
+      .prepare('SELECT * FROM forum_topics WHERE guild=? AND channel=? AND topic_url=?')
+      .get(guild, channel, topicUrl);
+  }
+  saveTopic(guild, channel, topicUrl, starter, message, thread = null) {
+    this.db
+      .prepare(
+        'INSERT INTO forum_topics VALUES(?,?,?,?,?,?) ON CONFLICT(guild,channel,topic_url) DO UPDATE SET starter_post=excluded.starter_post,message=excluded.message,thread=excluded.thread',
+      )
+      .run(guild, channel, topicUrl, String(starter), message, thread);
+  }
+  recordMessage(guild, post, channel, message) {
+    this.db
+      .prepare(
+        'INSERT INTO message_locations VALUES(?,?,?,?) ON CONFLICT(guild,post) DO UPDATE SET channel=excluded.channel,message=excluded.message',
+      )
+      .run(guild, String(post), channel, message);
+  }
+  messageLocation(guild, post) {
+    return this.db
+      .prepare('SELECT * FROM message_locations WHERE guild=? AND post=?')
+      .get(guild, String(post));
   }
   settings(guild) {
     return this.db.prepare('SELECT * FROM settings WHERE guild=?').get(guild);

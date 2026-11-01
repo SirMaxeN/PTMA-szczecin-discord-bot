@@ -198,18 +198,39 @@ export class ForumClient {
         });
       });
     const posts = new Map();
-    for (const topic of topics)
-      await this.pages(topic, ({ $, url }) => {
-        const parsed = parsePosts($, url, this.root, {
-          name: this.name,
-          breadcrumbPrefix: this.breadcrumbPrefix,
-        });
-        if (!parsed.length) throw new Error('Nie rozpoznano postów w temacie.');
-        for (const post of parsed) if (post.id > after) posts.set(post.id, post);
-      });
+    for (const topic of topics) {
+      const snapshot = await this.readTopic(topic);
+      for (const post of snapshot.posts) if (post.id > after) posts.set(post.id, post);
+    }
     return {
       maxId: Math.max(after, ...posts.keys()),
       posts: [...posts.values()].sort((a, b) => a.id - b.id),
+    };
+  }
+  async readTopic(value) {
+    const topicUrl = this.safeUrl(value);
+    topicUrl.search = '';
+    topicUrl.hash = '';
+    const posts = new Map();
+    await this.pages(topicUrl.href, ({ $, url }) => {
+      const parsed = parsePosts($, url, this.root, {
+        name: this.name,
+        breadcrumbPrefix: this.breadcrumbPrefix,
+      });
+      if (!parsed.length) throw new Error('Nie rozpoznano postów w temacie.');
+      for (const post of parsed) posts.set(post.id, post);
+    });
+    const ordered = [...posts.values()].sort((a, b) => a.id - b.id);
+    const starter = { ...ordered[0], topicUrl: topicUrl.href, isTopicStarter: true };
+    return {
+      topicUrl: topicUrl.href,
+      starter,
+      posts: ordered.map((post) => ({
+        ...post,
+        topicUrl: topicUrl.href,
+        isTopicStarter: post.id === starter.id,
+        starter,
+      })),
     };
   }
 }

@@ -22,6 +22,16 @@ Harmonogram obejmuje godziny od i do oraz odstęp 30 minut, 1, 2 lub 4 godziny. 
 
 Komend używają administratorzy i role wybrane w **Upoważnione role**. Listę zmienia tylko administrator. Uprawnienia i właściciel panelu są sprawdzani przy każdej interakcji. Nieuprawniona osoba może widzieć nazwę komendy, ale nie może jej wykonać.
 
+## Odpowiedzi w wątkach
+
+Odpowiedzi zawsze trafiają do wątków. Ten mechanizm nie wymaga przełącznika w ustawieniach.
+
+Nowy temat tworzy jedną wiadomość na kanale. Dopiero pierwsza odpowiedź tworzy pod nią publiczny wątek. Następne wpisy z tego tematu trafiają do tego samego wątku. Jeśli pierwsza wykryta odpowiedź dotyczy starszego tematu, bot znajduje istniejącą wiadomość otwierającą albo publikuje pierwszy wpis tematu jako punkt odniesienia.
+
+Powiązania są zapisywane w bazie osobno dla kanału i adresu tematu. Istniejące wiadomości oraz aktywne i zarchiwizowane wątki są sprawdzane po linku do forum, bez dopasowywania po samym tytule. Wątki zarchiwizowane są wznawiane; blokady ustawione przez moderatora pozostają w mocy. Bot potrzebuje Read Message History, Create Public Threads i Send Messages in Threads, oprócz uprawnień podstawowych.
+
+Automatyczna obsługa nie przenosi wcześniej wysłanych wiadomości. Ewentualne porządkowanie historii to osobna, jednorazowa operacja administracyjna; nie jest częścią harmonogramu ani ustawień bota.
+
 ## Uruchomienie
 
 Wymagania: Node.js 24 lub nowszy, aplikacja Discord z interakcjami HTTP i konto z prawem odczytu docelowego forum.

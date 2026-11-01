@@ -24,6 +24,8 @@ export class HelpView {
         '„Wstrzymaj sprawdzanie” zatrzymuje automat. Ręczne sprawdzanie nadal działa. Po wznowieniu bot uwzględni zaległe wpisy.',
         '„Usuń kanał powiadomień” odłącza kanał i zatrzymuje automat. Sam kanał na Discordzie pozostaje.',
         '',
+        'Nowy temat trafia na kanał. Pierwsza odpowiedź tworzy pod nim wątek, do którego trafiają kolejne odpowiedzi.',
+        '',
         '**Dostęp**',
         'Komend mogą używać administratorzy i role wybrane w „Upoważnione role”. Tę listę zmienia tylko administrator.',
         'Automat nie pisze na kanale, jeśli nie ma nowych postów.',

@@ -1,3 +1,4 @@
+import { ThreadedForumDelivery } from './discord/ThreadedForumDelivery.js';
 import { Database } from './storage/Database.js';
 import { DiscordApi } from './discord/DiscordApi.js';
 import { ForumClient } from './forum/ForumClient.js';
@@ -21,12 +22,14 @@ export function runtime() {
     password: process.env.FORUM_PASSWORD,
     sessionPath: process.env.FORUM_SESSION_PATH || './data/forum-session.json',
   });
-  const monitor = new ForumMonitor(database, forum, discord);
+  const threadedDelivery = new ThreadedForumDelivery(database, discord, forum);
+  const monitor = new ForumMonitor(database, forum, discord, threadedDelivery);
   return {
     database,
     discord,
     forum,
     monitor,
+    threadedDelivery,
     commands: new Commands(database, monitor, discord, process.env.DISCORD_GUILD_ID),
   };
 }
